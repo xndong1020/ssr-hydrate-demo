@@ -1,46 +1,80 @@
-# Getting Started with Create React App
+### 01. init setup for express server
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+server/src/index.js
 
-## Available Scripts
+```js
+const express = require('express')
+const React = require('react')
+const renderToString = require('react-dom/server').renderToString
 
-In the project directory, you can run:
+const Home = require('../../client/components/Home').default
 
-### `npm start`
+const app = express()
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+app.get('/', (req, res) => {
+  /**
+     * rather than mounting React components to some DOM node
+       it renders all those components exactly one time
+       converts the output of them to raw HTML, and returns it as a string
+     */
+  const content = renderToString(<Home />)
+  res.send(content)
+})
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+app.listen(3000, () => {
+  console.log('server listening on port 3000')
+})
+```
 
-### `npm test`
+now if you run `yarn start` or `node src/index.js`, you will get below error `const content = renderToString(<Home />) SyntaxError: Unexpected token '<'`. This is because express by default has no idea what the JSX syntax is.
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+#### 02. JSX on backend server
 
-### `npm run build`
+In order to work with JSX syntax, the backend server needs webpack & babel.
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+```js
+const path = require('path')
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+module.exports = {
+    /**
+     * we need to inform webpack to build a bundle for nodeJS
+     * rather than for the browser
+     */
+    target: 'node',
 
-### `npm run eject`
+    // root file of server application
+    entry: './src/index.js',
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+    // where to put output file
+    output: {
+        filename: 'bundle.js',
+        path: path.resolve(__dirname, 'build')
+    },
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
-
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
+    // run babel on every file
+    // Tell webpack to run babel on every file it runs through
+  module: {
+    rules: [
+      {
+        test: /\.jsx?$/,
+        loader: 'babel-loader',
+        exclude: /node_modules/,
+        options: {
+          presets: [
+            'react',
+            'stage-0',
+            ['env', { targets: { browsers: ['last 2 versions'] } }]
+          ]
+        }
+      }
+    ]
+  },
+  // Webpack doesn't know to resolve .jsx files implicitly.
+  // You can specify a file extension in your app (const Home = require('./client/components/Home.jsx').default).
+  // or include .jsx in the extensions that webpack should resolve without explicit declaration
+  resolve: {
+    extensions: ['.js', '.jsx']
+  }
+}
+```
