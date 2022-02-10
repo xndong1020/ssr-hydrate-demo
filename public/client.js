@@ -1037,7 +1037,7 @@ var _App = __webpack_require__(36);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-_reactDom2.default.render(_react2.default.createElement(_App.App, null), document.getElementById('root'));
+_reactDom2.default.hydrate(_react2.default.createElement(_App.App, null), document.getElementById('root'));
 
 /***/ }),
 /* 18 */
