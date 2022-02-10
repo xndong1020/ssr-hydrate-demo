@@ -121,6 +121,15 @@ app.listen(3000, () => {
 
 ```
 
+#### The whole process of the SSR
+1. App rendered on the server into some div in the 'template'
+2. Rendered app sent to the users browser
+3. Browser renders HTML file on the screen, the loads client bundle
+4. Client bundle boots up
+5. We manually render the React app a second time into the **same** div
+6. React renders our app on the client side, and compares the new HTML to what already exists in the document
+7. React now 'take over' the existing rendered app, binds event handlers, etc
+
 
 #### Load js file after html init renderer
 

@@ -2,7 +2,7 @@ const path = require('path')
 
 module.exports = {
   // we don't need 'target': 'node' like the webpack.server.js does, because the client.js is targeting browsers
-  entry: './client/src/App.jsx',
+  entry: './client/src/index.js',
   output: {
     filename: 'client.js',
     path: path.resolve(__dirname, 'public')

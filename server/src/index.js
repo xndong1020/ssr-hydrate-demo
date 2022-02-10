@@ -23,7 +23,7 @@ app.get('/', (req, res) => {
       <html>
         <head>Rendered from server</head>
         <body>
-          <div>${content}</div>
+          <div id="root">${content}</div>
           <!-- browser need to retrieve the client.js from the server, by looking from the Express.js static resources directory, which in our case is the 'public' directory-->
           <script src="client.js"></script>
         </body>
