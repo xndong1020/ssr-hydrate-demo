@@ -21570,7 +21570,7 @@ var Home = function Home() {
     _react2.default.createElement(
       'button',
       { onClick: function onClick() {
-          return console.log('Button clicked');
+          return console.log('Button clicked 22');
         } },
       'Request'
     )

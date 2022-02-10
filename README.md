@@ -227,7 +227,9 @@ app.get('/', (req, res) => {
     const content = renderToString(<App />)
     const html = `
       <html>
-        <head>Rendered from server</head>
+        <head>
+          <title>Rendered from server</title>
+        </head>
         <body>
           <div>${content}</div>
           <!-- browser need to retrieve the client.js from the server, by looking from the Express.js static resources directory, which in our case is the 'public' directory-->
@@ -252,7 +254,9 @@ app.get('/', (req, res) => {
     const content = renderToString(<App />)
     const html = `
       <html>
-        <head>Rendered from server</head>
+        <head>
+          <title>Rendered from server</title>
+        </head>
         <body>
           <div>${content}</div>
           <!-- browser need to retrieve the client.js from the server, by looking from the Express.js static resources directory, which in our case is the 'public' directory-->
@@ -264,3 +268,164 @@ app.get('/', (req, res) => {
 })
 ```
 
+
+#### Some code refactoring
+1. use webpack-merge to extract common components of the webpack config files
+
+webpack.common.js
+```js
+module.exports = {
+  // Tell webpack to run babel on every file it runs through
+  module: {
+    rules: [
+      {
+        test: /\.jsx?$/,
+        loader: 'babel-loader',
+        exclude: /node_modules/,
+        options: {
+          presets: [
+            'react',
+            'stage-0',
+            ['env', { targets: { browsers: ['last 2 versions'] } }]
+          ]
+        }
+      }
+    ]
+  }
+}
+```
+
+webpack.client.js
+```js
+const path = require('path')
+const merge = require('webpack-merge')
+const commonConfig = require('./webpack.common')
+
+const config = {
+  // we don't need 'target': 'node' like the webpack.server.js does, because the client.js is targeting browsers
+  entry: './client/src/index.js',
+  output: {
+    filename: 'client.js',
+    path: path.resolve(__dirname, 'public')
+  },
+  // Webpack doesn't know to resolve .jsx files implicitly.
+  // You can specify a file extension in your app (const Home = require('./client/components/Home.jsx').default).
+  // or include .jsx in the extensions that webpack should resolve without explicit declaration
+  resolve: {
+    extensions: ['.js', '.jsx']
+  }
+}
+
+module.exports = merge(commonConfig, config)
+```
+
+webpack.server.js
+
+```js
+const path = require('path')
+const merge = require('webpack-merge')
+const commonConfig = require('./webpack.common')
+
+const webpackNodeExternals = require('webpack-node-externals')
+
+const config = {
+  target: 'node',
+  entry: './server/src/index.js',
+  output: {
+    filename: 'bundle.js',
+    path: path.resolve(__dirname, 'build')
+  },
+  // to tell webpack not to bundle any libraries into our output bundle
+  externals: [webpackNodeExternals()],
+  // Webpack doesn't know to resolve .jsx files implicitly.
+  // You can specify a file extension in your app (const Home = require('./client/components/Home.jsx').default).
+  // or include .jsx in the extensions that webpack should resolve without explicit declaration
+  resolve: {
+    extensions: ['.js', '.jsx']
+  }
+} 
+
+module.exports = merge(commonConfig, config)
+```
+
+2. run multiple scripts in parallel
+
+```js
+  "scripts": {
+    "start": "npm-run-all --parallel dev:*",
+    "dev:server": "nodemon --watch build --exec \"node build/bundle.js\"",
+    "dev:build-server": "webpack --config webpack.server.js --watch",
+    "dev:build-client": "webpack --config webpack.client.js --watch"
+  },
+```
+
+3. reduce the size of the server bundle file
+
+webpack.server.js
+```js
+...
+externals: [webpackNodeExternals()]
+...
+```
+
+This will reduce the size of the server bundle file significantly, from more than 700K down to 6K.
+
+Webpack allows you to define externals - modules that should not be bundled.
+When bundling with Webpack for the backend - you usually don't want to bundle its node_modules dependencies. This library creates an externals function that ignores node_modules when bundling in Webpack.
+
+Webpack will load modules from the node_modules folder and bundle them in. This is fine for frontend code, but backend modules typically aren't prepared for this (i.e. using require in weird ways) or even worse are binary dependencies. We simply don't want to bundle in anything from node_modules.
+[Backend Apps with Webpack](https://archive.jlongster.com/Backend-Apps-with-Webpack--Part-I)
+
+4. refactor: extract server html rendering logic to an utility function
+
+```js
+import React from 'react'
+import { renderToString } from 'react-dom/server'
+
+import { App } from '../../../client/src/App'
+
+export default () => {
+  const content = renderToString(<App />)
+  const html = `
+      <html>
+        <head>
+          <title>Rendered from server</title>
+        </head>
+        <body>
+          <div id="root">${content}</div>
+          <!-- browser need to retrieve the client.js from the server, by looking from the Express.js static resources directory, which in our case is the 'public' directory-->
+          <script src="client.js"></script>
+        </body>
+      </html>
+    `
+  return html
+}
+
+```
+
+server/src/index.js
+
+```js
+import express from 'express'
+
+import renderer from './utils/renderer'
+
+
+const app = express()
+
+/**
+ * open up the 'public' directory to the outside world, 
+ * by telling Express.js to treat this public directory as a freely available public directory.
+ */
+app.use(express.static('public'))
+
+app.get('/', (req, res) => {
+    res.send(renderer())
+})
+
+app.listen(3000, () => {
+    console.log('server listening on port 3000')
+})
+
+
+```
