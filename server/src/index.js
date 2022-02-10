@@ -1,8 +1,8 @@
-const express = require('express')
-const React = require('react')
-const renderToString = require('react-dom/server').renderToString
+import express from 'express'
+import React from 'react'
+import { renderToString } from 'react-dom/server'
 
-const Home = require('../../client/src/components/Home').default
+import Home from '../../client/src/components/Home'
 
 const app = express()
 
@@ -19,3 +19,4 @@ app.get('/', (req, res) => {
 app.listen(3000, () => {
     console.log('server listening on port 3000')
 })
+

@@ -78,3 +78,15 @@ module.exports = {
   }
 }
 ```
+
+
+#### Add watch to any changes to any files, amd restart the server automatically
+
+package.json
+```json
+    "scripts": {
+      "start": "npm-run-all --parallel dev:build:server dev:server",
+      "dev:server": "nodemon --watch build --exec \"node build/bundle.js\"",  // nodemon only watch build folder, if anything changes, run `node build/bundle.js`
+      "dev:build:server": "webpack --config webpack.server.js --watch"
+    },
+```
