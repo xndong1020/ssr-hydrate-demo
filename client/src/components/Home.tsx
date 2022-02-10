@@ -1,11 +1,11 @@
 import React from 'react'
 import { Button, Alert } from '@mui/material'
 
-const Home = () => {
+const Home = (): JSX.Element => {
   return (
     <>
       <Alert>Home Component New</Alert>
-      <Button onClick={() => console.log('Button clicked 22')}>Request</Button>
+      <Button onClick={() => console.log('Button clicked')}>Click Me</Button>
     </>
   )
 }

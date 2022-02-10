@@ -429,3 +429,379 @@ app.listen(3000, () => {
 
 
 ```
+
+#### Upgrade to Webpack5 and React17
+
+package.json
+```js
+{
+  "name": "react-ssr",
+  "version": "1.0.0",
+  "description": "Server side rendering project",
+  "main": "index.js",
+  "scripts": {
+    "start": "npm-run-all -p dev:*",
+    "build": "webpack --config webpack.server.js & webpack --config webpack.client.js",
+    "dev:server": "nodemon --watch build --exec \"node build/server.js\"",
+    "dev:build-server": "webpack --config webpack.server.js --watch",
+    "dev:build-client": "webpack --config webpack.client.js --watch"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@emotion/react": "^11.7.1",
+    "@emotion/styled": "^11.6.0",
+    "@mui/material": "^5.4.1",
+    "express": "4.17.2",
+    "react": "17.0.2",
+    "react-dom": "17.0.2"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.17.2",
+    "@babel/preset-env": "^7.16.11",
+    "@babel/preset-react": "^7.16.7",
+    "babel-loader": "^8.2.3",
+    "nodemon": "2.0.15",
+    "npm-run-all": "4.1.5",
+    "terser-webpack-plugin": "^5.3.1",
+    "webpack": "5.68.0",
+    "webpack-cli": "^4.9.2",
+    "webpack-merge": "5.8.0"
+  }
+}
+
+```
+
+Add babel.config.json
+
+```json
+{
+  "presets": ["@babel/preset-env", "@babel/preset-react"],
+  "plugins": []
+}
+```
+
+Modify webpack config files
+
+webpack.common.js
+```js
+const TerserPlugin = require('terser-webpack-plugin')
+
+module.exports = {
+  mode: 'production',
+  // Tell webpack to run babel on every file it runs through
+  module: {
+    rules: [
+      {
+        test: /\.jsx?$/,
+        exclude: /node_modules/,
+        use: ['babel-loader']
+      }
+    ]
+  },
+  optimization: {
+    minimizer: [
+      new TerserPlugin({
+        extractComments: false
+      })
+    ]
+  },
+  resolve: {
+    extensions: ['*', '.js', '.jsx']
+  }
+}
+
+```
+
+webpack.client.js
+
+```js
+const path = require('path')
+const { merge } = require('webpack-merge')
+const common = require('./webpack.common')
+
+config = {
+  entry: './client/src/index.js',
+  output: {
+    filename: 'client.js',
+    path: path.resolve(__dirname, 'public')
+  }
+}
+
+module.exports = merge(common, config)
+
+```
+
+webpack.server.js
+
+```js
+const path = require('path')
+const { merge } = require('webpack-merge')
+const common = require('./webpack.common')
+
+
+config = {
+  target: 'node',
+  entry: './server/src/index.js',
+  output: {
+    filename: 'server.js',
+    path: path.resolve(__dirname, 'build')
+  },
+ 
+}
+
+module.exports = merge(common, config)
+```
+
+
+#### Upgrade to Typescript
+
+Step 1: install packages
+```
+yarn add -D typescript ts-node @types/node @types/react @types/react-dom @types/jest 
+```
+Step 2: Add the tsconfig.json
+
+```
+npx tsc --init
+```
+
+tsconfig.json
+```json
+{
+  "compilerOptions": {
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
+    "allowSyntheticDefaultImports": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react"
+  },
+  "include": ["src"]
+}
+```
+
+Here’s an explanation of the settings we have used:
+
+lib: The standard typing to be included in the type checking process. In our case, we have chosen to use the types for the browsers DOM as well as the latest version of ECMAScript.
+allowJs: Whether to allow JavaScript files to be compiled.
+allowSyntheticDefaultImports: This allows default imports from modules with no default export in the type checking process.
+skipLibCheck: Whether to skip type checking of all the type declaration files (*.d.ts).
+esModuleInterop: This enables compatibility with Babel.
+strict: This sets the level of type checking to very high. When this is true, the project is said to be running in strict mode.
+forceConsistentCasingInFileNames: Ensures that the casing of referenced file names is consistent during the type checking process.
+moduleResolution: How module dependencies get resolved, which is node for our project.
+resolveJsonModule: This allows modules to be in .json files which are useful for configuration files.
+noEmit: Whether to suppress TypeScript generating code during the compilation process. This is true in our project because Babel will be generating the JavaScript code.
+jsx: Whether to support JSX in .tsx files.
+include: These are the files and folders for TypeScript to check. In our project, we have specified all the files in the src folder.
+
+
+Step 3: add plugins for babel
+
+```
+yarn add  -D @babel/preset-typescript @babel/plugin-transform-runtime @babel/runtime
+```
+
+@babel/core: As the name suggests, this is the core Babel library.
+@babel/preset-env: This is a collection of plugins that allow us to use the latest JavaScript features but still target browsers that don’t support them.
+@babel/preset-react: This is a collection of plugins that enable Babel to transform React code into JavaScript.
+@babel/preset-typescript: This is a plugin that enables Babel to transform TypeScript code into JavaScript.
+@babel/plugin-transform-runtime and @babel/runtime: These are plugins that allow us to use the async and await JavaScript features.
+
+Step 4: Modify babel.config.json to add Typescript support
+
+```json
+{
+  "presets": [
+    "@babel/preset-env",
+    "@babel/preset-react",
+    "@babel/preset-typescript"
+  ],
+  "plugins": [
+    [
+      "@babel/plugin-transform-runtime",
+      {
+        "regenerator": true
+      }
+    ]
+  ]
+}
+```
+
+Step 5: Adding linting
+
+```
+yarn add eslint eslint-plugin-react eslint-plugin-react-hooks @typescript-eslint/parser @typescript-eslint/eslint-plugin
+```
+Below is an explanation of the packages that we just installed:
+
+eslint: This is the core ESLint library.
+eslint-plugin-react: This contains some standard linting rules for React code.
+eslint-plugin-react-hooks: This includes some linting rules for React hooks code.
+@typescript-eslint/parser: This allows TypeScript code to be linted.
+@typescript-eslint/eslint-plugin: This contains some standard linting rules for TypeScript code.
+
+Add a .eslintrc.json file in the project root
+
+```json
+{
+  "parser": "@typescript-eslint/parser",
+  "parserOptions": {
+    "ecmaVersion": 2018,
+    "sourceType": "module"
+  },
+  "plugins": [
+    "@typescript-eslint",
+    "react-hooks"
+  ],
+  "extends": [
+    "plugin:react/recommended",
+    "plugin:@typescript-eslint/recommended"
+  ],
+  "rules": {
+    "react-hooks/rules-of-hooks": "error",
+    "react-hooks/exhaustive-deps": "warn",
+    "react/prop-types": "off"
+  },
+  "settings": {
+    "react": {
+      "pragma": "React",
+      "version": "detect"
+    }
+  }
+}
+```
+
+Step 6: Update webpack.common.js to add Typescript support 
+
+```js
+const TerserPlugin = require('terser-webpack-plugin')
+
+module.exports = {
+  mode: 'production',
+  // Tell webpack to run babel on every file it runs through
+  module: {
+    rules: [
+      {
+        test: /\.(ts|js)x?$/,
+        exclude: /node_modules/,
+        use: ['babel-loader']
+      }
+    ]
+  },
+  optimization: {
+    minimizer: [
+      new TerserPlugin({
+        extractComments: false
+      })
+    ]
+  },
+  resolve: {
+    extensions: ['.tsx', '.ts', '.js', '.jsx']
+  }
+}
+
+```
+
+The entry field tells Webpack where to start looking for modules to bundle. In our project, this is index.tsx.
+The module field tells Webpack how different modules will be treated. Our project is telling Webpack to use the babel-loader plugin to process files with .js, .ts, and .tsx extensions.
+The resolve.extensions field tells Webpack what file types to look for in which order during module resolution.
+The output field tells Webpack where to bundle our code. In our project, this is the file called bundle.js in the build folder.
+The devServer field configures the Webpack development server. We are telling it that the root of the web server is the build folder, and to serve files on port 4000.
+
+
+Now you can rename the React components to tsx extension.
+
+```
+.
+└── src
+    ├── App.tsx
+    ├── components
+    │   └── Home.tsx
+    └── index.tsx
+
+```
+
+And change the entry of the webpack.client.js to use the index.tsx file as entry point
+
+```js
+const path = require('path')
+const { merge } = require('webpack-merge')
+const common = require('./webpack.common')
+
+config = {
+  entry: './client/src/index.tsx',
+  output: {
+    filename: 'client.js',
+    path: path.resolve(__dirname, 'public')
+  }
+}
+
+module.exports = merge(common, config)
+
+```
+
+Reference for adding ts support: 
+[Creating React and TypeScript apps with Webpack](https://www.carlrippon.com/creating-react-and-typescript-apps-with-webpack/)
+
+Now we can convert the server code to TypeScript
+
+Step 7: install type definitions for express
+```
+yarn add -D @types/express
+```
+
+Step 8: rename server/src/index.js to index.ts
+
+```ts
+import express, { Request, Response } from 'express'
+
+import renderer from './utils/renderer'
+
+
+const app = express()
+
+/**
+ * open up the 'public' directory to the outside world, 
+ * by telling Express.js to treat this public directory as a freely available public directory.
+ */
+app.use(express.static('public'))
+
+app.get('/', (req: Request, res: Response) => {
+  res.send(renderer())
+})
+
+app.listen(3000, () => {
+    console.log('server listening on port 3000')
+})
+
+
+```
+
+And modify the entry point of webpack.server.js from 'index.js' to 'index.ts'
+
+```js
+const path = require('path')
+const { merge } = require('webpack-merge')
+const common = require('./webpack.common')
+
+
+config = {
+  target: 'node',
+  entry: './server/src/index.ts',
+  output: {
+    filename: 'server.js',
+    path: path.resolve(__dirname, 'build')
+  },
+ 
+}
+
+module.exports = merge(common, config)
+```

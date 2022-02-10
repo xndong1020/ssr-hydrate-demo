@@ -1,4 +1,4 @@
-import express from 'express'
+import express, { Request, Response } from 'express'
 
 import renderer from './utils/renderer'
 
@@ -11,8 +11,8 @@ const app = express()
  */
 app.use(express.static('public'))
 
-app.get('/', (req, res) => {
-    res.send(renderer())
+app.get('/', (req: Request, res: Response) => {
+  res.send(renderer())
 })
 
 app.listen(3000, () => {

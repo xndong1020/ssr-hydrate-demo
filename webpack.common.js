@@ -1,4 +1,5 @@
 const TerserPlugin = require('terser-webpack-plugin')
+const ForkTsCheckerWebpackPlugin = require('fork-ts-checker-webpack-plugin')
 
 module.exports = {
   mode: 'production',
@@ -6,7 +7,7 @@ module.exports = {
   module: {
     rules: [
       {
-        test: /\.jsx?$/,
+        test: /\.(ts|js)x?$/,
         exclude: /node_modules/,
         use: ['babel-loader']
       }
@@ -20,6 +21,6 @@ module.exports = {
     ]
   },
   resolve: {
-    extensions: ['*', '.js', '.jsx']
+    extensions: ['.tsx', '.ts', '.js', '.jsx']
   }
 }
