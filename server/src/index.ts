@@ -2,7 +2,6 @@ import express, { Request, Response } from 'express'
 
 import renderer from './utils/renderer'
 
-
 const app = express()
 
 /**
@@ -11,8 +10,10 @@ const app = express()
  */
 app.use(express.static('public'))
 
-app.get('/', (req: Request, res: Response) => {
-  res.send(renderer())
+app.get('/favicon.ico', (req, res) => res.status(204))
+
+app.get('*', (req: Request, res: Response) => {
+  res.send(renderer(req.url))
 })
 
 app.listen(3000, () => {
