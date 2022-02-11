@@ -13,10 +13,10 @@ const app = express()
 
 app.get('/', (req, res) => {
   /**
-     * rather than mounting React components to some DOM node
-       it renders all those components exactly one time
-       converts the output of them to raw HTML, and returns it as a string
-     */
+   * rather than mounting React components to some DOM node
+     it renders all those components exactly one time
+     converts the output of them to raw HTML, and returns it as a string
+  */
   const content = renderToString(<Home />)
   res.send(content)
 })
@@ -968,3 +968,275 @@ app.listen(3000, () => {
 ```
 
 Now the SSR has 2 routes, '/' -> Home component, and '/hi' -> <div>Hi</div>
+
+
+
+#### Integrating Support for Redux
+4 big challenges
+- Redux needs different configuration on browser vs server
+- Aspects of authentication needs to be handled on server. Normally this is only on browser. (cookie or token are saved on client side)
+- Need some way to detect when all initial data load action creators are completed on server 
+- Need state rehydration on the browser
+
+Solution:
+1. We need to setup 2 instances of redux, one on the client, and one on the server.
+
+**client state store**
+client/src/_store/configureStore.ts
+
+```ts
+import ReduxThunk from 'redux-thunk'
+
+import { createStore, applyMiddleware, combineReducers, compose } from 'redux'
+
+import { usersReducer } from '../_reducers/usersReducer'
+import { authReducer } from '../_reducers/authReducer'
+import { loadingStatusReducer } from '../_reducers/loadingStatusReducer'
+
+const rootReducer = combineReducers({
+  auth: authReducer,
+  users: usersReducer,
+  loadingStatus: loadingStatusReducer
+})
+
+const composeEnhancers =
+  (process.env.REACT_APP_DEPLOYMENT_STATE !== 'production' &&
+    (window as Record<any, any>).__REDUX_DEVTOOLS_EXTENSION__ &&
+    (window as Record<any, any>).__REDUX_DEVTOOLS_EXTENSION__()) ||
+  compose
+
+export const store = createStore(
+  rootReducer,
+  {},
+  composeEnhancers(applyMiddleware(ReduxThunk))
+)
+export type RootState = ReturnType<typeof rootReducer>
+
+```
+
+**Caveat**:
+In webpack 5 automatic node.js polyfills are removed. hence if you try to access the 'process' from front-end code, it will throw an error 'process is not defined'. 
+
+Solution is to install 'yarn add -D process', then use  ProvidePlugin in webpack.client.js
+
+webpack.client.js
+```js
+const webpack = require('webpack')
+const path = require('path')
+const { merge } = require('webpack-merge')
+const common = require('./webpack.common')
+
+config = {
+  entry: './client/src/index.tsx',
+  output: {
+    filename: 'client.js',
+    path: path.resolve(__dirname, 'public')
+  },
+  devtool: 'eval-source-map',
+  // In webpack 5 automatic node.js polyfills are removed. hence you will get an error 'process is not defined'
+  // solution is to install 'yarn add -D process', then use below ProvidePlugin to frontend
+  plugins: [
+    new webpack.ProvidePlugin({
+      process: 'process/browser'
+    }),
+    new webpack.EnvironmentPlugin({
+      DEPLOYMENT_STATE: 'development', // use 'development' unless process.env.DEPLOYMENT_STATE is defined
+      API_BASE_URL: 'http://localhost:5000'
+    })
+  ]
+}
+
+module.exports = merge(common, config)
+
+```
+
+
+**server state store**
+
+```ts
+import ReduxThunk from 'redux-thunk'
+import { createStore, applyMiddleware } from 'redux'
+import { rootReducer } from '../../../shared/src/_reducers/rootReducer'
+
+export default () => {
+    const store = createStore(rootReducer, {}, applyMiddleware(ReduxThunk))
+    return store
+} 
+```
+
+then in the server/src/index.ts file
+
+```ts
+import express, { Request, Response } from 'express'
+
+import configureStore from './_store/configureStore'
+import renderer from './utils/renderer'
+
+const app = express()
+
+/**
+ * open up the 'public' directory to the outside world, 
+ * by telling Express.js to treat this public directory as a freely available public directory.
+ */
+app.use(express.static('public'))
+
+app.get('/favicon.ico', (req, res) => res.status(204))
+
+app.get('*', (req: Request, res: Response) => {
+  const store = configureStore()
+  res.send(renderer(req.url, store))
+})
+
+app.listen(3000, () => {
+    console.log('server listening on port 3000')
+})
+```
+
+Note: we create the store object in the route handler, then pass it down to the `renderer` util function
+
+server/src/utils/renderer.tsx
+```ts
+import React from 'react'
+import { AnyAction, Store } from 'redux'
+import { Provider } from 'react-redux'
+import { renderToString } from 'react-dom/server'
+import { StaticRouter } from 'react-router-dom/server'
+import Routes from '../../../shared/src/Routes'
+
+export default (url: string, store: Store<any, AnyAction>): string => {
+  /**
+   * rather than mounting React components to some DOM node
+     it renders all those components exactly one time
+    converts the output of them to raw HTML, and returns it as a string
+  */
+  const content = renderToString(
+    // StaticRouter doesn't have the access to the browser url, hence it must read the current path from req.url
+    // for determining which component need to return to the user
+    <Provider store={store}>
+      <StaticRouter location={url}>
+        <Routes />
+      </StaticRouter>
+    </Provider>
+  )
+  const html = `
+      <html>
+        <head>
+          <title>Rendered from server</title>
+        </head>
+        <body>
+          <div id="root">${content}</div>
+          <!-- browser need to retrieve the client.js from the server, by looking from the Express.js static resources directory, which in our case is the 'public' directory-->
+          <script src="client.js"></script>
+        </body>
+      </html>
+    `
+  return html
+}
+
+```
+
+**shared reducers, action creators and  more**
+
+
+shared/src/_reducers/usersReducer.ts
+```ts
+
+import { User } from '../models/User'
+import { UserActionTypes } from '../_actions/userAction/actionTypes'
+
+interface UserStateProps  {
+    data?: User[] | undefined,
+    error?: string | undefined
+}
+
+const initUserState: UserStateProps = {
+  data: [],
+  error: undefined
+}
+
+type FETCH_USER = {
+    type: UserActionTypes.FETCH_USER
+}
+
+type FETCH_USER_SUCCESS = {
+    type: UserActionTypes.FETCH_USER_SUCCESS,
+    payload: User[]
+}
+
+type FETCH_USER_FAILED = {
+    type: UserActionTypes.FETCH_USER_FAILED,
+    payload: string
+}
+
+type FETCH_USER_ACTION_TYPE = FETCH_USER | FETCH_USER_SUCCESS | FETCH_USER_FAILED
+
+export const usersReducer = (
+  state = initUserState,
+  action: FETCH_USER_ACTION_TYPE
+): UserStateProps => {
+  switch (action.type) {
+    case UserActionTypes.FETCH_USER_SUCCESS:
+      return { data: action.payload, error: undefined }
+    case UserActionTypes.FETCH_USER_FAILED:
+      return { data: undefined, error: action.payload }
+    default:
+      return state
+  }
+}
+```
+
+shared/src/_reducers/loadingStatusReducer.ts
+
+```ts
+import { LoadingStatusActionType } from "../_actions/loadingStatusAction/actionTypes"
+
+interface LoadingStatusProps {
+    isLoading: boolean
+}
+
+const initLoadingStatus: LoadingStatusProps = {
+  isLoading: false
+}
+
+type SET_IS_LOADING_TRUE = {
+    type: LoadingStatusActionType.SET_IS_LOADING_TRUE
+}
+
+type SET_IS_LOADING_FALSE = {
+  type: LoadingStatusActionType.SET_IS_LOADING_FALSE
+}
+
+type LOAD_STATUS_TYPE = SET_IS_LOADING_TRUE | SET_IS_LOADING_FALSE
+
+export const loadingStatusReducer = (
+  initState = initLoadingStatus,
+  action: LOAD_STATUS_TYPE
+): LoadingStatusProps => {
+  switch (action.type) {
+    case LoadingStatusActionType.SET_IS_LOADING_TRUE:
+      return { isLoading: true }
+    case LoadingStatusActionType.SET_IS_LOADING_FALSE:
+      return { isLoading: false }
+    default:
+      return initState
+  }
+}
+```
+
+We combined these reducers into rootReducer
+
+```ts
+import { createStore, applyMiddleware, combineReducers } from 'redux'
+
+import { usersReducer } from './usersReducer'
+import { authReducer } from './authReducer'
+import { loadingStatusReducer } from './loadingStatusReducer'
+
+export const rootReducer = combineReducers({
+  auth: authReducer,
+  users: usersReducer,
+  loadingStatus: loadingStatusReducer
+})
+
+export type RootState = ReturnType<typeof rootReducer>
+```

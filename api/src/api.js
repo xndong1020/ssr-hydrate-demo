@@ -1,5 +1,5 @@
 const express = require('express')
-
+const cors = require('cors')
 const adminService = require('./services/adminService')
 const userService = require('./services/userService')
 const { loginUser } = require('./services/authService')
@@ -8,6 +8,7 @@ const checkUser = require('./authMiddleware')
 const FAKE_TOKEN_PREFIX = 'MY_FAKE_TOKEN_FOR_USER_ID_'
 
 const app = express()
+app.use(cors())
 app.use(express.json()) //parse request body as JSON
 
 app.get('/users', async (req, res) => {

@@ -1,0 +1,4 @@
+export enum LoadingStatusActionType {
+  SET_IS_LOADING_TRUE = 'SET_IS_LOADING_TRUE',
+  SET_IS_LOADING_FALSE = 'SET_IS_LOADING_FALSE'
+}

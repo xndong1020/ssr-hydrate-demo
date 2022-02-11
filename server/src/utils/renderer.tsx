@@ -1,20 +1,24 @@
 import React from 'react'
+import { AnyAction, Store } from 'redux'
+import { Provider } from 'react-redux'
 import { renderToString } from 'react-dom/server'
 import { StaticRouter } from 'react-router-dom/server'
 import Routes from '../../../shared/src/Routes'
 
-export default (url: string): string => {
+export default (url: string, store: Store<any, AnyAction>): string => {
   /**
-     * rather than mounting React components to some DOM node
-         it renders all those components exactly one time
-        converts the output of them to raw HTML, and returns it as a string
-        */
+   * rather than mounting React components to some DOM node
+     it renders all those components exactly one time
+    converts the output of them to raw HTML, and returns it as a string
+  */
   const content = renderToString(
     // StaticRouter doesn't have the access to the browser url, hence it must read the current path from req.url
     // for determining which component need to return to the user
-    <StaticRouter location={url}>
-      <Routes />
-    </StaticRouter>
+    <Provider store={store}>
+      <StaticRouter location={url}>
+        <Routes />
+      </StaticRouter>
+    </Provider>
   )
   const html = `
       <html>
