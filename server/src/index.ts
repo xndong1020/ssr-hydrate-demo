@@ -14,16 +14,13 @@ app.use(express.static('public'))
 app.get('/favicon.ico', (req, res) => res.status(204))
 
 app.get('*', (req: Request, res: Response) => {
-  console.log('req.url', req.url)
   const activeRoute = routes.find(route => route.path === req.url)
   const store = configureStore()
-  if (activeRoute && activeRoute.fetchInitialData) {
-    activeRoute
-      .fetchInitialData()(store.dispatch)
-      .then(() => {
-        console.log('store', store)
-        res.send(renderer(req.url, store))
-      })
+  if (activeRoute && activeRoute.loadData) {
+    activeRoute.loadData(store.dispatch).then(() => {
+      console.log('store', store)
+      res.send(renderer(req.url, store))
+    })
   }
  
     

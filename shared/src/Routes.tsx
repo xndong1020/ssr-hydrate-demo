@@ -1,9 +1,8 @@
 import React from "react";
 import { Routes, Route } from 'react-router-dom'
-import { Dispatch, AnyAction } from 'redux'
+import { Dispatch } from 'redux'
 import Home from '../../client/src/components/Home'
-import { UserList } from '../../client/src/components/UserList'
-import { fetchUserAsync } from "./_actions/userAction/actionCreators";
+import { loadUserListData, UserList } from '../../client/src/components/UserList'
 
 
 
@@ -18,14 +17,8 @@ import { fetchUserAsync } from "./_actions/userAction/actionCreators";
 
 export type CustomRoute = {
   path: string
-  component: ({
-    fetchInitialData
-  }: {
-    fetchInitialData: () => (dispatch: Dispatch<AnyAction>) => Promise<any>
-  }) => JSX.Element
-  fetchInitialData?: () => (
-    dispatch: Dispatch<AnyAction>
-  ) => Promise<any> | undefined
+  component: () => JSX.Element
+  loadData?: (dispatch: Dispatch<any>) => any | undefined
 }
 
 export const routes: CustomRoute[] = [
@@ -36,7 +29,7 @@ export const routes: CustomRoute[] = [
   {
     path: '/users',
     component: UserList,
-    fetchInitialData: () => fetchUserAsync()
+    loadData: loadUserListData
   }
 ]
 
@@ -44,12 +37,12 @@ export const UnifiedRoutes = (): JSX.Element => {
   return (
     <Routes>
       {routes.map((route: CustomRoute) => {
-        const { path, fetchInitialData, component: Comp } = route
+        const { path, loadData, component: Comp } = route
         return (
           <Route
             key={path}
             path={path}
-            element={<Comp fetchInitialData={fetchInitialData} />}
+            element={<Comp />}
           />
         )
       })}
