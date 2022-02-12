@@ -3,7 +3,7 @@ import { AnyAction, Store } from 'redux'
 import { Provider } from 'react-redux'
 import { renderToString } from 'react-dom/server'
 import { StaticRouter } from 'react-router-dom/server'
-import Routes from '../../../shared/src/Routes'
+import { UnifiedRoutes } from '../../../shared/src/Routes'
 
 export default (url: string, store: Store<any, AnyAction>): string => {
   /**
@@ -16,10 +16,11 @@ export default (url: string, store: Store<any, AnyAction>): string => {
     // for determining which component need to return to the user
     <Provider store={store}>
       <StaticRouter location={url}>
-        <Routes />
+        <UnifiedRoutes />
       </StaticRouter>
     </Provider>
   )
+  console.log('store', store.getState())
   const html = `
       <html>
         <head>

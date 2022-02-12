@@ -30,7 +30,7 @@ type USER_LOG_OUT = {
   type: AuthActionTypes.USER_LOG_OUT
 }
 
-type AUTH_ACTION_TYPE =
+export type AUTH_ACTION_TYPE =
   | USER_LOG_IN
   | USER_LOG_IN_SUCCESS
   | USER_LOG_IN_FAIL

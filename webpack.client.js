@@ -17,8 +17,7 @@ config = {
       process: 'process/browser'
     }),
     new webpack.EnvironmentPlugin({
-      DEPLOYMENT_STATE: 'development', // use 'development' unless process.env.DEPLOYMENT_STATE is defined
-      API_BASE_URL: 'http://localhost:5000'
+      __isBrowser__: 'true'
     })
   ]
 }

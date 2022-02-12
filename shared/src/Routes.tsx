@@ -1,28 +1,59 @@
-import React, { Suspense } from "react";
+import React from "react";
 import { Routes, Route } from 'react-router-dom'
+import { Dispatch, AnyAction } from 'redux'
 import Home from '../../client/src/components/Home'
 import { UserList } from '../../client/src/components/UserList'
-import { Loading } from '../../client/src/components/Loading'
+import { fetchUserAsync } from "./_actions/userAction/actionCreators";
 
-// const HomePage = React.lazy(() => import('../../client/src/components/Home')); // Lazy-loaded
 
-// ReactDOMServer does not yet support Suspense (and lazy)
+
 // export default () => {
 //     return (
-//       <Suspense fallback={<Loading />}>
-//         <Routes>
-//           <Route path="/" element={<HomePage />} />
-//           <Route path="/hi" element={<div>Hi</div>} />
-//         </Routes>
-//       </Suspense>
+//       <Routes>
+//         <Route path="/" element={<Home />} />
+//         <Route path="/users" element={<UserList/>} />
+//       </Routes>
 //     )
 // }
 
-export default () => {
-    return (
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/users" element={<UserList/>} />
-      </Routes>
-    )
+export type CustomRoute = {
+  path: string
+  component: ({
+    fetchInitialData
+  }: {
+    fetchInitialData: () => (dispatch: Dispatch<AnyAction>) => Promise<any>
+  }) => JSX.Element
+  fetchInitialData?: () => (
+    dispatch: Dispatch<AnyAction>
+  ) => Promise<any> | undefined
+}
+
+export const routes: CustomRoute[] = [
+  {
+    path: '/',
+    component: Home
+  },
+  {
+    path: '/users',
+    component: UserList,
+    fetchInitialData: () => fetchUserAsync()
+  }
+]
+
+export const UnifiedRoutes = (): JSX.Element => {
+  return (
+    <Routes>
+      {routes.map((route: CustomRoute) => {
+        const { path, fetchInitialData, component: Comp } = route
+        return (
+          <Route
+            key={path}
+            path={path}
+            element={<Comp fetchInitialData={fetchInitialData} />}
+          />
+        )
+      })}
+      <Route path="*" element={<div>Not Found</div>} />
+    </Routes>
+  )
 }

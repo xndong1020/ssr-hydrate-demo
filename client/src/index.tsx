@@ -5,12 +5,12 @@ import { BrowserRouter } from 'react-router-dom'
 
 import { store } from './_store/configureStore'
 
-import Routes from '../../shared/src/Routes'
+import { UnifiedRoutes } from '../../shared/src/Routes'
 
 ReactDom.hydrate(
   <Provider store={store}>
     <BrowserRouter>
-      <Routes />
+      <UnifiedRoutes />
     </BrowserRouter>
   </Provider>,
   document.getElementById('root')

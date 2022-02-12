@@ -26,7 +26,7 @@ type FETCH_USER_FAILED = {
     payload: string
 }
 
-type FETCH_USER_ACTION_TYPE = FETCH_USER | FETCH_USER_SUCCESS | FETCH_USER_FAILED
+export type FETCH_USER_ACTION_TYPE = FETCH_USER | FETCH_USER_SUCCESS | FETCH_USER_FAILED
 
 export const usersReducer = (
   state = initUserState,

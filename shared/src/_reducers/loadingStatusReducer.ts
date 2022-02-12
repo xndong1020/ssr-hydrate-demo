@@ -16,7 +16,7 @@ type SET_IS_LOADING_FALSE = {
   type: LoadingStatusActionType.SET_IS_LOADING_FALSE
 }
 
-type LOAD_STATUS_TYPE = SET_IS_LOADING_TRUE | SET_IS_LOADING_FALSE
+export type LOAD_STATUS_TYPE = SET_IS_LOADING_TRUE | SET_IS_LOADING_FALSE
 
 export const loadingStatusReducer = (
   initState = initLoadingStatus,

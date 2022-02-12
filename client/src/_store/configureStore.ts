@@ -3,7 +3,8 @@ import ReduxThunk from 'redux-thunk'
 import { createStore, applyMiddleware, compose } from 'redux'
 import { rootReducer } from '../../../shared/src/_reducers/rootReducer'
 
-console.log('process', process.env.DEPLOYMENT_STATE)
+console.log('DEPLOYMENT_STATE', process.env.DEPLOYMENT_STATE)
+console.log('__isBrowser__', process.env.__isBrowser__)
 
 const composeEnhancers =
   (process.env.DEPLOYMENT_STATE !== 'production' &&

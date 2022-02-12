@@ -1,3 +1,4 @@
+const webpack = require('webpack')
 const TerserPlugin = require('terser-webpack-plugin')
 const ForkTsCheckerWebpackPlugin = require('fork-ts-checker-webpack-plugin')
 
@@ -20,6 +21,12 @@ module.exports = {
       })
     ]
   },
+  plugins: [
+    new webpack.EnvironmentPlugin({
+      DEPLOYMENT_STATE: 'development', // use 'development' unless process.env.DEPLOYMENT_STATE is defined
+      API_BASE_URL: 'http://localhost:5000'
+    })
+  ],
   resolve: {
     extensions: ['.tsx', '.ts', '.js', '.jsx']
   }

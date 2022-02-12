@@ -978,7 +978,7 @@ Now the SSR has 2 routes, '/' -> Home component, and '/hi' -> <div>Hi</div>
 - Need some way to detect when all initial data load action creators are completed on server 
 - Need state rehydration on the browser
 
-Solution:
+##### Solution to the first challenge:
 1. We need to setup 2 instances of redux, one on the client, and one on the server.
 
 **client state store**
@@ -1240,3 +1240,187 @@ export const rootReducer = combineReducers({
 
 export type RootState = ReturnType<typeof rootReducer>
 ```
+
+##### How to detect that date loading has been completed during the server side rendering process
+1. How data loading on the server right now:
+![data-loading-on-client-side](./docs/imgs/data-loading-on-client-side.png)
+
+2. However, on the server, when the server receives a request, it take our redux store(with default init state), and use it to render the html string, and instantly send it back to the user's browser. There is no time allowed for completing the data loading. There is no time for the reducer the get the list of users and there's no time to allow the app to re-render itself with the new list of users.
+
+Also, the 'componentDidMount' life cycle event is not even being invoked on the server! :scream:
+
+3. ==Possible solution 1== to this issue:
+In the renderer, after the initial store loaded with default init state, wait for all action creator requests to complete, then use the renderer to render a second time. At this point, 'store' has all of the data in it, then send it back to user's browser.
+
+cons:
+1. renders 2 times on the server, and re-rendering on the server is very computationally expensive.
+2. only loads one round of requests. 
+
+4. ==Possible solution 2==
+Dispatch async action creator based on request url, and populate data into store, before send it back to the client.
+
+Step 1: Convert Router.tsx to config-based
+
+Before it is a simple functional component by using react-router-dom
+
+shared/src/Routes.tsx
+```tsx
+import React, { Suspense } from "react";
+import { Routes, Route } from 'react-router-dom'
+import Home from '../../client/src/components/Home'
+import { UserList } from '../../client/src/components/UserList'
+import { Loading } from '../../client/src/components/Loading'
+
+export default () => {
+    return (
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/users" element={<UserList/>} />
+      </Routes>
+    )
+}
+```
+
+Now it becomes `UnifiedRoutes` functional component 
+
+```tsx
+import React from "react";
+import { Routes, Route } from 'react-router-dom'
+import { Dispatch, AnyAction } from 'redux'
+import Home from '../../client/src/components/Home'
+import { UserList } from '../../client/src/components/UserList'
+import { fetchUserAsync } from "./_actions/userAction/actionCreators";
+
+export type CustomRoute = {
+  path: string
+  component: ({
+    fetchInitialData
+  }: {
+    fetchInitialData: () => (dispatch: Dispatch<AnyAction>) => Promise<any>
+  }) => JSX.Element
+  fetchInitialData?: () => (
+    dispatch: Dispatch<AnyAction>
+  ) => Promise<any> | undefined
+}
+
+export const routes: CustomRoute[] = [
+  {
+    path: '/',
+    component: Home
+  },
+  {
+    path: '/users',
+    component: UserList,
+    fetchInitialData: () => fetchUserAsync()
+  }
+]
+
+export const UnifiedRoutes = (): JSX.Element => {
+  return (
+    <Routes>
+      {routes.map((route: CustomRoute) => {
+        const { path, fetchInitialData, component: Comp } = route
+        return (
+          <Route
+            key={path}
+            path={path}
+            element={<Comp fetchInitialData={fetchInitialData} />}
+          />
+        )
+      })}
+      <Route path="*" element={<div>Not Found</div>} />
+    </Routes>
+  )
+}
+```
+
+The main difference here is, some `CustomRoute` will have a `fetchInitialData` action creator, which will be invoked from server-side for initial state data population:
+
+server/src/index.ts
+
+```ts
+import express, { Request, Response } from 'express'
+import configureStore from './_store/configureStore'
+import renderer from './utils/renderer'
+import { routes } from '../../shared/src/Routes'
+
+const app = express()
+
+/**
+ * open up the 'public' directory to the outside world, 
+ * by telling Express.js to treat this public directory as a freely available public directory.
+ */
+app.use(express.static('public'))
+
+app.get('/favicon.ico', (req, res) => res.status(204))
+
+app.get('*', (req: Request, res: Response) => {
+  // find the active route based on the user's request url, and decide which action creator `fetchInitialData` to dispatch
+  const activeRoute = routes.find(route => route.path === req.url)
+  const store = configureStore()
+  if (activeRoute && activeRoute.fetchInitialData) {
+    activeRoute
+      .fetchInitialData()(store.dispatch)
+      .then(() => {
+        console.log('store', store)
+        res.send(renderer(req.url, store))
+      })
+  }
+})
+
+app.listen(3000, () => {
+    console.log('server listening on port 3000')
+})
+
+```
+Now because the `renderer` function is called when the loading data async function is resolved, so it will have data populated, before renderer function send it to the client's browser.
+
+Also, this `fetchInitialData` action creator can be injected into the related component:
+
+client/src/components/UserList.tsx
+```tsx
+import React, { useEffect } from 'react'
+import { useDispatch, useSelector } from 'react-redux'
+import { AnyAction, Dispatch } from 'redux'
+import { User } from '../../../shared/src/models/User'
+import { RootState } from '../../../shared/src/_reducers/rootReducer'
+
+
+export const UserList = ({
+  fetchInitialData
+}: {
+  fetchInitialData: () => (dispatch: Dispatch<AnyAction>) => Promise<any>
+}) => {
+  const dispatch = useDispatch()
+  const { data } = useSelector((state: RootState) => state.users)
+
+  // client side fetch data, will be DELETED 
+  useEffect(() => {
+    const fetchUsers = () => {
+      dispatch(fetchInitialData())
+    }
+    fetchUsers()
+  }, [])
+
+  return (
+    <>
+      <div>Here's a big list of users:</div>
+      <ul>
+        {data && data.map((user: User) => {
+          return <li key={user.id}>{user.name}</li>
+        })}
+      </ul>
+    </>
+  )
+}
+
+```
+
+**NOTE**: We actually rely on the server-side to fetch data based on the req.url, and load data into store. The client doesn't need to fetch data again!!
+
+
+Reference:
+[Server Rendering with React and React Router](https://ui.dev/react-router-server-rendering)
+[Redux Fundamentals, Part 6: Async Logic and Data Fetching](https://redux.js.org/tutorials/fundamentals/part-6-async-logic)
+
+
