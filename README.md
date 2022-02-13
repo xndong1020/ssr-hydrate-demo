@@ -16,3 +16,8 @@ Initialize Redux integration for both server-side and client-side. Creates separ
 
 [07.Server Side Data Loading](./docs/07.Server-Side-Data-Loading.md)<br>
 Based on the user's request url, loading data to the server-side store. Once the data loading is resolved, render the html string, then pass down to the clients' browser.
+
+[08.Client State Rehydration](./docs/08.Client-State-Rehydration.md)<br>
+Client-side Redux store initialize with the server-side store, passed down from the rendered HTML string.
+
+

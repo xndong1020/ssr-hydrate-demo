@@ -2,6 +2,7 @@ import React from 'react'
 import { AnyAction, Store } from 'redux'
 import { Provider } from 'react-redux'
 import { renderToString } from 'react-dom/server'
+import  serialize from 'serialize-javascript'
 import { StaticRouter } from 'react-router-dom/server'
 import { UnifiedRoutes } from '../../../shared/src/Routes'
 
@@ -20,7 +21,6 @@ export default (url: string, store: Store<any, AnyAction>): string => {
       </StaticRouter>
     </Provider>
   )
-  console.log('store', store.getState())
   const html = `
       <html>
         <head>
@@ -29,6 +29,10 @@ export default (url: string, store: Store<any, AnyAction>): string => {
         <body>
           <div id="root">${content}</div>
           <!-- browser need to retrieve the client.js from the server, by looking from the Express.js static resources directory, which in our case is the 'public' directory-->
+           <!--dumps store state into global window object-->
+          <script>
+            window.__INITIAL_STATE__ = ${serialize(store.getState())}
+          </script>
           <script src="client.js"></script>
         </body>
       </html>
