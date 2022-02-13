@@ -9,7 +9,7 @@ export const loadUserListData = (dispatch: Dispatch<any>) => {
   return dispatch(fetchUserAsync())
 }
 
-export const UserList = () => {
+export const UserListPage = () => {
   const dispatch = useDispatch();
   const { data } = useSelector((state: RootState) => state.users)
 

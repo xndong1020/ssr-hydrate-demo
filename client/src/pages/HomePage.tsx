@@ -4,7 +4,7 @@ import { Button, Alert } from '@mui/material'
 // import { RootState } from '../_store/configureStore'
 // import { LoginUserAsync } from '../_actions/authAction/actionCreators'
 
-const Home = (): JSX.Element => {
+const HomePage = (): JSX.Element => {
   // const dispatch = useDispatch()
   // const { isLoggedIn } = useSelector((state: RootState) => state.auth)
   // const { data } = useSelector((state: RootState) => state.users)
@@ -24,4 +24,4 @@ const Home = (): JSX.Element => {
   )
 }
 
-export default Home
+export default HomePage

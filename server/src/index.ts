@@ -15,15 +15,16 @@ app.get('/favicon.ico', (req, res) => res.status(204))
 
 app.get('*', (req: Request, res: Response) => {
   const activeRoute = routes.find(route => route.path === req.url)
+  console.log('activeRoute', activeRoute)
   const store = configureStore()
   if (activeRoute && activeRoute.loadData) {
     activeRoute.loadData(store.dispatch).then(() => {
       console.log('store', store)
       res.send(renderer(req.url, store))
     })
+  } else {
+    res.send(renderer(req.url, store))
   }
- 
-    
 })
 
 app.listen(3000, () => {

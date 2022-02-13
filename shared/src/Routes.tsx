@@ -1,8 +1,8 @@
 import React from "react";
 import { Routes, Route } from 'react-router-dom'
 import { Dispatch } from 'redux'
-import Home from '../../client/src/components/Home'
-import { loadUserListData, UserList } from '../../client/src/components/UserList'
+import HomePage from '../../client/src/pages/HomePage'
+import { loadUserListData, UserListPage } from '../../client/src/pages/UserListPage'
 
 
 
@@ -24,11 +24,11 @@ export type CustomRoute = {
 export const routes: CustomRoute[] = [
   {
     path: '/',
-    component: Home
+    component: HomePage
   },
   {
     path: '/users',
-    component: UserList,
+    component: UserListPage,
     loadData: loadUserListData
   }
 ]
